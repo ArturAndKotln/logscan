@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}LogScan - Результаты анализа{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-check-circle"></i> Анализ завершен успешно!
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-file-alt"></i> Информация о файле
+                                </h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Имя файла:</th>
+                                        <td>{{ filename }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Артефактов найдено:</th>
+                                        <td><span class="badge bg-primary">{{ total_artifacts }}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Угроз обнаружено:</th>
+                                        <td>
+                                            {% if threats_found > 0 %}
+                                                <span class="badge bg-danger">{{ threats_found }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success">{{ threats_found }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-chart-pie"></i> Статистика
+                                </h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>IP-адреса:</th>
+                                        <td>{{ artifacts_summary.IP }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Хэши SHA256:</th>
+                                        <td>{{ artifacts_summary.HASH }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Файл отчета:</th>
+                                        <td><code>{{ output_file }}</code></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if results %}
+                <div class="mt-4">
+                    <h5>
+                        <i class="fas fa-search"></i> Обнаруженные артефакты (первые 10)
+                    </h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Тип</th>
+                                    <th>Значение</th>
+                                    <th>Уровень угрозы</th>
+                                    <th>Результат проверки</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in results %}
+                                <tr class="{% if item.is_threat %}table-danger{% endif %}">
+                                    <td>
+                                        <span class="badge {% if item.type == 'IP' %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ item.type }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <code>{{ item.value[:30] }}{% if item.value|length > 30 %}...{% endif %}</code>
+                                    </td>
+                                    <td>
+                                        {% if item.threat_level == 'CRITICAL' %}
+                                            <span class="badge bg-danger">КРИТИЧЕСКИЙ</span>
+                                        {% elif item.threat_level == 'HIGH' %}
+                                            <span class="badge bg-warning">ВЫСОКИЙ</span>
+                                        {% elif item.threat_level == 'MEDIUM' %}
+                                            <span class="badge bg-info">СРЕДНИЙ</span>
+                                        {% elif item.threat_level == 'LOW' %}
+                                            <span class="badge bg-secondary">НИЗКИЙ</span>
+                                        {% else %}
+                                            <span class="badge bg-success">НЕТ</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.is_threat %}
+                                            <i class="fas fa-exclamation-triangle text-danger"></i> Угроза обнаружена
+                                        {% else %}
+                                            <i class="fas fa-check-circle text-success"></i> Безопасно
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="mt-4">
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-download"></i> Действия:</h6>
+                        <div class="btn-group mt-2" role="group">
+                            <a href="{{ url_for('download_report', filename=output_file) }}"
+                               class="btn btn-primary">
+                                <i class="fas fa-file-download"></i> Скачать полный отчет
+                            </a>
+                            <a href="{{ url_for('view_report', filename=output_file) }}"
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-eye"></i> Просмотреть отчет
+                            </a>
+                            <a href="{{ url_for('upload_file') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo"></i> Новый анализ
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}LogScan - Отчет {{ filename }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-alt"></i> Отчет: {{ filename }}
+                    </h4>
+                    <div>
+                        <a href="{{ url_for('download_report', filename=filename) }}"
+                           class="btn btn-sm btn-light">
+                            <i class="fas fa-download"></i> Скачать
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if report_data %}
+                    {% if not is_csv %}
+                        <!-- JSON отчет -->
+                        <div class="mb-4">
+                            <h5>Сводная информация:</h5>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title">Всего артефактов</h6>
+                                            <h3 class="text-primary">{{ report_data.total_artifacts }}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title">Найдено угроз</h6>
+                                            <h3 class="text-danger">{{ report_data.threats_found }}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title">Дата генерации</h6>
+                                            <h6>{{ report_data.generated_at }}</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h5>Детали:</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Значение</th>
+                                        <th>Тип</th>
+                                        <th>Уровень угрозы</th>
+                                        <th>Вредоносных</th>
+                                        <th>Подозрительных</th>
+                                        <th>Дата проверки</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for artifact in report_data.artifacts %}
+                                    <tr class="{% if artifact.is_threat %}table-danger{% endif %}">
+                                        <td><code>{{ artifact.value[:40] }}{% if artifact.value|length > 40 %}...{% endif %}</code></td>
+                                        <td><span class="badge {% if artifact.type == 'IP' %}bg-info{% else %}bg-warning{% endif %}">{{ artifact.type }}</span></td>
+                                        <td>
+                                            {% if artifact.threat_level == 'CRITICAL' %}
+                                                <span class="badge bg-danger">{{ artifact.threat_level }}</span>
+                                            {% elif artifact.threat_level == 'HIGH' %}
+                                                <span class="badge bg-warning">{{ artifact.threat_level }}</span>
+                                            {% elif artifact.threat_level == 'MEDIUM' %}
+                                                <span class="badge bg-info">{{ artifact.threat_level }}</span>
+                                            {% elif artifact.threat_level == 'LOW' %}
+                                                <span class="badge bg-secondary">{{ artifact.threat_level }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success">{{ artifact.threat_level }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ artifact.details.malicious }}</td>
+                                        <td>{{ artifact.details.suspicious }}</td>
+                                        <td>{{ artifact.check_date[:19] }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <!-- CSV отчет -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> CSV отчет содержит следующие колонки:
+                            value, type, check_date, is_threat, threat_level, malicious_count, suspicious_count, details
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        {% for key in report_data.artifacts[0].keys() %}
+                                        <th>{{ key }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for artifact in report_data.artifacts %}
+                                    <tr>
+                                        {% for value in artifact.values() %}
+                                        <td>
+                                            {% if value is string and (value.startswith('{') or value.startswith('[')) %}
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        onclick="toggleJson(this)">Показать JSON</button>
+                                                <pre style="display: none;">{{ value|safe }}</pre>
+                                            {% else %}
+                                                {{ value }}
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Данные отчета не найдены.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{{ url_for('recent_reports') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> К списку отчетов
+            </a>
+            <a href="{{ url_for('download_report', filename=filename) }}" class="btn btn-primary">
+                <i class="fas fa-download"></i> Скачать отчет
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleJson(button) {
+    const pre = button.nextElementSibling;
+    if (pre.style.display === 'none') {
+        pre.style.display = 'block';
+        button.textContent = 'Скрыть JSON';
+    } else {
+        pre.style.display = 'none';
+        button.textContent = 'Показать JSON';
+    }
+}
+
+// Форматирование длинных строк в таблице
+document.addEventListener('DOMContentLoaded', function() {
+    const cells = document.querySelectorAll('td code');
+    cells.forEach(cell => {
+        if (cell.textContent.length > 50) {
+            cell.title = cell.textContent;
+        }
+    });
+});
+</script>
+{% endblock %}

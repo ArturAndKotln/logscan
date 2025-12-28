@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}LogScan - Загрузка файла{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-file-upload"></i> Загрузка лог-файла для анализа
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Выберите лог-файл:</label>
+                        <input type="file" class="form-control" name="logfile" id="logfile"
+                               accept=".log,.txt,.json,.csv" required>
+                        <div class="form-text">
+                            Поддерживаемые форматы: .log, .txt, .json, .csv (макс. 16MB)
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">VirusTotal API ключ:</label>
+                        <input type="password" class="form-control" name="api_key"
+                               placeholder="Введите ваш API ключ (опционально)">
+                        <div class="form-text">
+                            <a href="https://www.virustotal.com/gui/join-us" target="_blank">
+                                <i class="fas fa-external-link-alt"></i> Получить бесплатный API ключ
+                            </a> | Оставьте пустым для работы в тестовом режиме
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Формат отчета:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="format"
+                                   id="formatJson" value="json" checked>
+                            <label class="form-check-label" for="formatJson">
+                                <i class="fas fa-code"></i> JSON (рекомендуется)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="format"
+                                   id="formatCsv" value="csv">
+                            <label class="form-check-label" for="formatCsv">
+                                <i class="fas fa-table"></i> CSV
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Что происходит после загрузки:</strong>
+                        <ol class="mt-2">
+                            <li>Извлекаются все IP-адреса и SHA256 хэши</li>
+                            <li>Каждый артефакт проверяется через VirusTotal API</li>
+                            <li>Формируется отчет с результатами проверки</li>
+                            <li>Вы получаете детальный отчет для скачивания</li>
+                        </ol>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left"></i> Назад
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <i class="fas fa-play"></i> Начать анализ
+                        </button>
+                    </div>
+                </form>
+
+                <div id="uploadProgress" class="mt-4" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             style="width: 100%"></div>
+                    </div>
+                    <p class="text-center mt-2">
+                        <i class="fas fa-spinner fa-spin"></i> Анализирую файл... Это может занять несколько минут
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt"></i> Пример лог-файла
+                </h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded" style="font-size: 0.9rem;">
+2025-11-27 10:30:45 INFO Server started
+2025-11-27 10:31:22 ERROR Failed login from 185.220.101.4
+2025-11-27 10:32:10 WARNING File hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+2025-11-27 10:33:05 INFO SSH connection from 94.102.61.24
+2025-11-27 10:34:18 DEBUG Upload: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+2025-11-27 10:35:42 INFO User login from 192.168.1.100</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#uploadForm').on('submit', function() {
+        $('#uploadBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Обработка...');
+        $('#uploadProgress').show();
+    });
+
+    // Показываем размер файла при выборе
+    $('#logfile').on('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            $(this).next('.form-text').html(
+                `Выбран файл: ${file.name} (${sizeMB} MB). ` +
+                `Поддерживаемые форматы: .log, .txt, .json, .csv (макс. 16MB)`
+            );
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}LogScan - Главная{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="jumbotron bg-light p-5 rounded">
+            <h1 class="display-4">
+                <i class="fas fa-shield-alt text-primary"></i> LogScan
+            </h1>
+            <p class="lead">Веб-интерфейс для анализа лог-файлов и проверки угроз</p>
+            <hr class="my-4">
+            <p>Автоматическое извлечение и проверка подозрительных артефактов (IP-адреса, хэши файлов) через VirusTotal API.</p>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-upload text-success"></i> Анализ файла
+                            </h5>
+                            <p class="card-text">Загрузите лог-файл для анализа и получите детальный отчет.</p>
+                            <a href="{{ url_for('upload_file') }}" class="btn btn-success">
+                                <i class="fas fa-upload"></i> Загрузить файл
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-bolt text-warning"></i> Быстрая проверка
+                            </h5>
+                            <p class="card-text">Вставьте текст лога для мгновенного анализа.</p>
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#quickScanModal">
+                                <i class="fas fa-bolt"></i> Быстрый анализ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-search text-primary"></i> Извлечение артефактов
+                        </h5>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> IP-адреса</li>
+                            <li><i class="fas fa-check text-success"></i> SHA256 хэши</li>
+                            <li><i class="fas fa-check text-success"></i> Регулярные выражения</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-shield-virus text-danger"></i> Проверка угроз
+                        </h5>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> VirusTotal API</li>
+                            <li><i class="fas fa-check text-success"></i> Mock-режим</li>
+                            <li><i class="fas fa-check text-success"></i> Репутационный анализ</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-file-alt text-info"></i> Отчеты
+                        </h5>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> JSON формат</li>
+                            <li><i class="fas fa-check text-success"></i> CSV формат</li>
+                            <li><i class="fas fa-check text-success"></i> Детальная статистика</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно быстрого анализа -->
+<div class="modal fade" id="quickScanModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Быстрый анализ лога</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickScanForm">
+                    <div class="mb-3">
+                        <label class="form-label">Введите текст лога:</label>
+                        <textarea class="form-control" name="log_text" rows="8"
+                                  placeholder="Вставьте содержимое лог-файла сюда..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">VirusTotal API ключ (опционально):</label>
+                        <input type="text" class="form-control" name="api_key"
+                               placeholder="Оставьте пустым для mock-режима">
+                        <div class="form-text">Без ключа будет использоваться тестовый режим с демонстрационными данными</div>
+                    </div>
+                </form>
+
+                <div id="quickScanResult" class="mt-3" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" onclick="performQuickScan()">
+                    <i class="fas fa-play"></i> Начать анализ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function performQuickScan() {
+    const form = $('#quickScanForm');
+    const resultDiv = $('#quickScanResult');
+
+    resultDiv.hide().html(`
+        <div class="alert alert-info">
+            <i class="fas fa-spinner fa-spin"></i> Анализирую лог...
+        </div>
+    `).show();
+
+    $.ajax({
+        url: '{{ url_for("quick_scan") }}',
+        type: 'POST',
+        data: form.serialize(),
+        success: function(response) {
+            if (response.success) {
+                const data = response.data;
+                let html = `
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle"></i> Анализ завершен!</h5>
+                        <p>Найдено артефактов: ${data.total_artifacts}</p>
+                        <p>Обнаружено угроз: <span class="badge bg-danger">${data.threats_found}</span></p>
+                    </div>
+                `;
+
+                if (data.results && data.results.length > 0) {
+                    html += `<h6>Обнаруженные артефакты:</h6><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Тип</th><th>Значение</th><th>Угроза</th></tr></thead><tbody>`;
+
+                    data.results.forEach(item => {
+                        const threatBadge = item.is_threat ?
+                            `<span class="badge bg-danger">ДА</span>` :
+                            `<span class="badge bg-success">НЕТ</span>`;
+
+                        html += `<tr>
+                            <td>${item.type}</td>
+                            <td><code>${item.value.substring(0, 20)}${item.value.length > 20 ? '...' : ''}</code></td>
+                            <td>${threatBadge}</td>
+                        </tr>`;
+                    });
+
+                    html += `</tbody></table></div>`;
+                }
+
+                resultDiv.html(html);
+            } else {
+                resultDiv.html(`
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Ошибка: ${response.error}
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr) {
+            let errorMsg = 'Ошибка при выполнении запроса';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMsg = response.error || errorMsg;
+            } catch (e) {}
+
+            resultDiv.html(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> ${errorMsg}
+                </div>
+            `);
+        }
+    });
+}
+</script>
+{% endblock %}
